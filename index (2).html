@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elegant Crypto Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f6fa;
+            --text-color: #2c3e50;
+            --border-color: #dcdde1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .mode-switch {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .mode-btn:not(.active) {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        .input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 1em;
+            resize: vertical;
+        }
+
+        .formula-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 1em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .result-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .result-text {
+            width: 100%;
+            min-height: 100px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 1em;
+            resize: none;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background-color: #2ecc71;
+            color: white;
+            border-radius: 5px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>优雅加解密工具</h1>
+            <p>使用数学公式作为密钥的高级加密工具</p>
+        </div>
+
+        <div class="mode-switch">
+            <button class="mode-btn active" id="encryptMode">加密模式</button>
+            <button class="mode-btn" id="decryptMode">解密模式</button>
+        </div>
+
+        <div class="input-section" id="encryptSection">
+            <textarea class="textarea" id="inputText" placeholder="请输入需要加密的文本..."></textarea>
+            <input type="text" class="formula-input" id="formulaInput" placeholder="输入数学公式，例如: 2.718281828 * 3.141592654">
+            <div class="button-group">
+                <button class="btn" id="generateFormula">生成公式</button>
+                <button class="btn" id="resetInput">重置输入</button>
+                <button class="btn" id="encrypt">加密</button>
+            </div>
+        </div>
+
+        <div class="input-section" id="decryptSection" style="display: none;">
+            <textarea class="textarea" id="decryptInput" placeholder="请输入需要解密的文本..."></textarea>
+            <div class="button-group">
+                <button class="btn" id="pasteFromClipboard">从剪贴板粘贴</button>
+                <button class="btn" id="decrypt">解密</button>
+            </div>
+        </div>
+
+        <div class="result-section">
+            <textarea class="result-text" id="resultText" readonly placeholder="结果将在这里显示..."></textarea>
+            <button class="btn" id="copyResult">复制结果</button>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">已复制到剪贴板</div>
+
+    <script>
+        // 工具函数
+        function evaluateFormula(formula) {
+            try {
+                const result = new Function('return ' + formula)();
+                return result.toString().split('.')[1].substring(0, 10);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function generateRandomFormula() {
+            const e = Math.E;
+            const pi = Math.PI;
+            const operations = ['+', '-', '*', '/'];
+            const operation = operations[Math.floor(Math.random() * operations.length)];
+            return `${e} ${operation} ${pi}`;
+        }
+
+        // DOM 元素
+        const elements = {
+            encryptMode: document.getElementById('encryptMode'),
+            decryptMode: document.getElementById('decryptMode'),
+            encryptSection: document.getElementById('encryptSection'),
+            decryptSection: document.getElementById('decryptSection'),
+            inputText: document.getElementById('inputText'),
+            formulaInput: document.getElementById('formulaInput'),
+            generateFormula: document.getElementById('generateFormula'),
+            resetInput: document.getElementById('resetInput'),
+            encrypt: document.getElementById('encrypt'),
+            decryptInput: document.getElementById('decryptInput'),
+            pasteFromClipboard: document.getElementById('pasteFromClipboard'),
+            decrypt: document.getElementById('decrypt'),
+            resultText: document.getElementById('resultText'),
+            copyResult: document.getElementById('copyResult'),
+            notification: document.getElementById('notification')
+        };
+
+        // 模式切换
+        elements.encryptMode.addEventListener('click', () => {
+            elements.encryptMode.classList.add('active');
+            elements.decryptMode.classList.remove('active');
+            elements.encryptSection.style.display = 'block';
+            elements.decryptSection.style.display = 'none';
+        });
+
+        elements.decryptMode.addEventListener('click', () => {
+            elements.decryptMode.classList.add('active');
+            elements.encryptMode.classList.remove('active');
+            elements.encryptSection.style.display = 'none';
+            elements.decryptSection.style.display = 'block';
+        });
+
+        // 生成公式
+        elements.generateFormula.addEventListener('click', () => {
+            elements.formulaInput.value = generateRandomFormula();
+        });
+
+        // 重置输入
+        elements.resetInput.addEventListener('click', () => {
+            elements.inputText.value = '';
+            elements.formulaInput.value = '';
+        });
+
+        // 加密功能
+        elements.encrypt.addEventListener('click', () => {
+            const text = elements.inputText.value;
+            const formula = elements.formulaInput.value;
+            
+            if (!text || !formula) {
+                alert('请输入文本和公式！');
+                return;
+            }
+
+            const key = evaluateFormula(formula);
+            if (!key) {
+                alert('公式无效！');
+                return;
+            }
+
+            const encrypted = CryptoJS.AES.encrypt(text, key).toString();
+            elements.resultText.value = encrypted;
+        });
+
+        // 从剪贴板粘贴
+        elements.pasteFromClipboard.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text.startsWith('密文Encrypted:')) {
+                    elements.decryptInput.value = text;
+                } else {
+                    alert('剪贴板内容格式不正确！');
+                }
+            } catch (err) {
+                alert('无法访问剪贴板！');
+            }
+        });
+
+        // 解密功能
+        elements.decrypt.addEventListener('click', () => {
+            const input = elements.decryptInput.value;
+            if (!input.startsWith('密文Encrypted:')) {
+                alert('输入格式不正确！');
+                return;
+            }
+
+            const parts = input.split('密文Encrypted:');
+            if (parts.length !== 2) {
+                alert('无法解析输入！');
+                return;
+            }
+
+            const [encryptedText, formula] = parts[1].split('Formula:').map(s => s.trim());
+            const key = evaluateFormula(formula);
+            
+            if (!key) {
+                alert('公式无效！');
+                return;
+            }
+
+            try {
+                const decrypted = CryptoJS.AES.decrypt(encryptedText, key).toString(CryptoJS.enc.Utf8);
+                elements.resultText.value = decrypted;
+            } catch (err) {
+                alert('解密失败！');
+            }
+        });
+
+        // 复制结果
+        elements.copyResult.addEventListener('click', async () => {
+            const result = elements.resultText.value;
+            const formula = elements.formulaInput.value;
+            
+            if (!result) {
+                alert('没有可复制的内容！');
+                return;
+            }
+
+            const textToCopy = `密文Encrypted:${result}Formula:${formula}`;
+            
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                elements.notification.style.display = 'block';
+                setTimeout(() => {
+                    elements.notification.style.display = 'none';
+                }, 2000);
+            } catch (err) {
+                alert('复制失败！');
+            }
+        });
+    </script>
+</body>
+</html>
